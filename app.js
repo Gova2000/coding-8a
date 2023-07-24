@@ -24,56 +24,58 @@ const conArray = async () => {
 conArray();
 
 //get all query based url
-app.get("/todos/", async (request, response) => {
-  const { status = "" } = request.query;
-  const repo = `
-    select*from 
-    todo
-    where 
-    
-    status like '%${status}%'
-    
-    ;`;
-  const Getting = await db.all(repo);
-  response.send(Getting);
-});
+const hasStatusAndPri = (req) => {
+  return req.priority !== undefined && req.status !== undefined;
+};
+
+const hasPriority = (req1) => {
+  return req1.priority !== undefined;
+};
+
+const hasStatus = (req2) => {
+  return req2.status !== undefined;
+};
 
 app.get("/todos/", async (request, response) => {
-  const { priority = "" } = request.query;
-  const repo = `
+  const { status, priority, search_q = "" } = request.query;
+  let repo = "";
+  switch (true) {
+    case hasStatusAndPri(request.query):
+      repo = `
     select*from 
     todo
     where 
-    priority like '%${priority}%'
-    
+    todo LIKE '%${search_q}%'
+     AND status ='%${status}%'
+     AND priority='%${priority}%'
     ;`;
-  const Getting = await db.all(repo);
-  response.send(Getting);
-});
+      break;
 
-app.get("/todos/", async (request, response) => {
-  const { priority = "", status = "" } = request.query;
-  const repo = `
+    case hasPriority(request.query):
+      repo = `
     select*from 
     todo
-    where 
-    priority like '%${priority}%'
-    status like '%${status}%'
-    
-    ;`;
-  const Getting = await db.all(repo);
-  response.send(Getting);
-});
+    where
+    todo LIKE '${search_q}'
+   AND priority = '%${priority}%';`;
+      break;
 
-app.get("/todos/", async (request, response) => {
-  const { search_q = "" } = request.query;
-  const repo = `
+    case hasStatus(request.query):
+      repo = `
     select*from 
     todo
     where 
-    
-    title like '%${search_q}%'
-    ;`;
+    todo LIKE '%${search_q}%' AND
+    status ='%${status}%';`;
+      break;
+    default:
+      repo = `
+        select*
+        from 
+        todo
+        where 
+        todo LIKE '%${search_q}%';`;
+  }
   const Getting = await db.all(repo);
   response.send(Getting);
 });
