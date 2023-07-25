@@ -25,15 +25,15 @@ conArray();
 
 //get all query based url
 const hasStatusAndPri = (req) => {
-  return req.priority !== undefined && req.status !== undefined;
+  return (req.priority !== undefined) & (req.status !== undefined);
 };
 
-const hasPriority = (req1) => {
-  return req1.priority !== undefined;
+const hasPriority = (req) => {
+  return req.priority !== undefined;
 };
 
-const hasStatus = (req2) => {
-  return req2.status !== undefined;
+const hasStatus = (req) => {
+  return req.status !== undefined;
 };
 
 app.get("/todos/", async (request, response) => {
@@ -46,8 +46,8 @@ app.get("/todos/", async (request, response) => {
     todo
     where 
     todo LIKE '%${search_q}%'
-     AND status ='%${status}%'
-     AND priority='%${priority}%'
+     AND status ='${status}'
+     AND priority='${priority}'
     ;`;
       break;
 
@@ -56,8 +56,8 @@ app.get("/todos/", async (request, response) => {
     select*from 
     todo
     where
-    todo LIKE '${search_q}'
-   AND priority = '%${priority}%';`;
+    todo LIKE '%${search_q}%'
+   AND priority = '${priority}';`;
       break;
 
     case hasStatus(request.query):
@@ -66,7 +66,7 @@ app.get("/todos/", async (request, response) => {
     todo
     where 
     todo LIKE '%${search_q}%' AND
-    status ='%${status}%';`;
+    status ='${status}';`;
       break;
     default:
       repo = `
@@ -81,7 +81,7 @@ app.get("/todos/", async (request, response) => {
 });
 
 //API get based on ID
-app.get("/todos/:todoId/", async (response, request) => {
+app.get("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
   const apps = `
     SELECT*FROM
@@ -113,44 +113,46 @@ app.post("/todos/", async (request, response) => {
 //Update todo based on ID
 app.put("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
-  const Upd = request.body;
-  const { status } = Upd;
-  const IdUpdate = `
-    UPDATE todo
-    SET
+  const reqBody = request.body;
+  let upd = "";
+  switch (true) {
+    case reqBody.status !== undefined:
+      upd = "Status";
+      break;
+
+    case reqBody.priority !== undefined:
+      upd = "Priority";
+      break;
+    case reqBody.todo !== undefined:
+      upd = "Todo";
+      break;
+  }
+  const PreTodo = `
+  SELECT
+  *
+  FROM
+    todo
+  WHERE
+    id=${todoId};`;
+
+  const pre = await db.get(PreTodo);
+  const {
+    todo = pre.todo,
+    priority = pre.priority,
+    status = pre.status,
+  } = reqBody;
+
+  const upReq = `
+  UPDATE
+  todo
+  SET
+    todo='${todo}',
+    priority='${priority}',
     status='${status}'
-    WHERE 
-    id=${todoId};`;
-  await db.run(IdUpdate);
-  response.send("Status Updated");
-});
-
-app.put("/todos/:todoId/", async (request, response) => {
-  const { todoId } = request.params;
-  const Upd3 = request.body;
-  const { priority } = Upd3;
-  const IdUpdate3 = `
-    UPDATE todo
-    SET
-    priority='${priority}'
-    WHERE 
-    id=${todoId};`;
-  await db.run(IdUpdate3);
-  response.send("Priority Updated");
-});
-
-app.put("/todos/:todoId/", async (request, response) => {
-  const { todoId } = request.params;
-  const Upd2 = request.body;
-  const { todo } = Upd2;
-  const IdUpdate2 = `
-    UPDATE todo
-    SET
-    todo='${todo}'
-    WHERE 
-    id=${todoId};`;
-  await db.run(IdUpdate2);
-  response.send("Todo Updated");
+  WHERE
+  id=${todoId};`;
+  await db.run(upReq);
+  response.send(`${upd} Updated`);
 });
 
 //delete todo based on ID
